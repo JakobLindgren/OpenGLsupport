@@ -1,4 +1,5 @@
 #include "DiagramWindow.h"
+#include "Wrapper.h"
 #include <GL/freeglut.h>
 #include <sstream>
 #include <iostream>
@@ -100,29 +101,30 @@ void DiagramArea::VerticalAxis::draw(int height)
 {
 	float scale = height / (max - min);
 
-	glBegin(GL_LINES);
-	glVertex2i(0, 0);
-	glVertex2i(0, height);
-	for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 	{
-		float h = (it->value - min) * scale;
-		glVertex2f(0, h);
-		glVertex2f(-LineLength, h);
+		GlBegin gb(GlBegin::lines);
+
+		glVertex2i(0, 0);
+		glVertex2i(0, height);
+		for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
+		{
+			float h = (it->value - min) * scale;
+			glVertex2f(0, h);
+			glVertex2f(-LineLength, h);
+		}
 	}
-	glEnd();
+
 	for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 	{
 		float h = (it->value - min) * scale;
 
-		glPushMatrix();
-
+		GlPushMatrix pm;
 		glTranslatef(-it->length - LineLength, h, 0);
 		{
 			float temp = font->getScale();
 			glScalef(temp, temp, 1);
 		}
 		font->string(it->str);
-		glPopMatrix();
 	}
 }
 
@@ -176,29 +178,30 @@ void DiagramArea::HorizontalAxis::draw(int width)
 {
 	float scale = width / (max - min);
 
-	glBegin(GL_LINES);
-	glVertex2i(0, 0);
-	glVertex2i(width, 0);
-	for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 	{
-		float w = (it->value - min) * scale;
+		GlBegin gb(GlBegin::lines);
 
-		glVertex2f(w, 0);
-		glVertex2f(w, -LineLength);
+		glVertex2i(0, 0);
+		glVertex2i(width, 0);
+		for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
+		{
+			float w = (it->value - min) * scale;
+
+			glVertex2f(w, 0);
+			glVertex2f(w, -LineLength);
+		}
 	}
-	glEnd();
 
 	for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 	{
 		float w = (it->value - min) * scale;
-		glPushMatrix();
+		GlPushMatrix pm;
 		glTranslated(w - it->length *0.5, -LineLength - FontHeight, 0);
 		{
 			float temp = font->getScale();
 			glScalef(temp, temp, 1);
 		}
 		font->string(it->str);
-		glPopMatrix();
 	}
 }
 
@@ -250,7 +253,7 @@ void DiagramArea::setTitle(std::string value)
 }
 void DiagramArea::drawDiagram(void)
 {
-	glBegin(GL_LINES);
+	GlBegin gb(GlBegin::lines);
 	glColor3ub(128, 128, 128);
 	for (int a = 0; a < 4; a++)
 	{
@@ -264,12 +267,12 @@ void DiagramArea::drawDiagram(void)
 			glVertex2f(b_x, b_y);
 		}
 	}
-	glEnd();
 }
 
 void drawCross(double d)
 {
-	glBegin(GL_LINES);
+	GlBegin gb(GlBegin::lines);
+
 	glColor3f(0, 0, 0);
 	glVertex2d(-d, 0);
 	glVertex2d(+d, 0);
@@ -280,7 +283,6 @@ void drawCross(double d)
 	glVertex2d(-d, -d);
 	glVertex2d(+d, -d);
 	glVertex2d(-d, +d);
-	glEnd();
 }
 
 
@@ -308,12 +310,11 @@ void DiagramArea::draw(void)
 	int diagramWidth = width - sizeLeft - sizeRight;
 	int diagramHeight = height - sizeTop - sizeBottom - FontHeight;
 
-	glPushMatrix();
 	{
+		GlPushMatrix pm;
 		gluOrtho2D(0, width, 0, height);
-
-		glPushMatrix();
 		{
+			GlPushMatrix pm;
 			glTranslatef(float(sizeLeft), float(sizeBottom), 0);
 
 			glColor3d(0, 0, 0);
@@ -324,9 +325,8 @@ void DiagramArea::draw(void)
 			glTranslatef(1, 1, 0);
 			drawDiagram();
 		}
-		glPopMatrix();
-		glPushMatrix();
 		{
+			GlPushMatrix pm;
 			glTranslatef((width - titleLength)*0.5f, float(height - FontHeight), 0);
 			{
 				float temp = font->getScale();
@@ -335,9 +335,7 @@ void DiagramArea::draw(void)
 			glColor3f(0,0,0);
 			font->string(title);
 		}
-		glPopMatrix();
 	}
-	glPopMatrix();
 
 }
 
@@ -391,30 +389,29 @@ void Histogram::HistogramChannel::draw(float width, int index)
 	{
 		unsigned int count = buckets[i];
 
-		glBegin(GL_QUADS);
-		setColor(index);
-		glVertex2f(x0, 0);
-		glVertex2f(x1, 0);
-		glVertex2f(x1, float(count));
-		glVertex2f(x0, float(count));
-		glEnd();
-		glBegin(GL_LINE_LOOP);
-		glColor3ub(0, 0, 0);
-		glVertex2f(x0, 0);
-		glVertex2f(x1, 0);
-		glVertex2f(x1, float(count));
-		glVertex2f(x0, float(count));
-		glEnd();
+		{
+			GlBegin gb(GlBegin::quads);
+			setColor(index);
+			glVertex2f(x0, 0);
+			glVertex2f(x1, 0);
+			glVertex2f(x1, float(count));
+			glVertex2f(x0, float(count));
+		}
+		{
+			GlBegin gb(GlBegin::line_loop);
+
+			glColor3ub(0, 0, 0);
+			glVertex2f(x0, 0);
+			glVertex2f(x1, 0);
+			glVertex2f(x1, float(count));
+			glVertex2f(x0, float(count));
+		}
 
 
 		x0 += 1.0f;
 		x1 += 1.0f;
 
 	}
-
-	glEnd();
-
-
 }
 
 
@@ -546,17 +543,16 @@ void Histogram::drawDiagram(void)
 	float width = 1.0f / histogramChannels.size();
 
 
-	glPushMatrix();
-	gluOrtho2D(0, settings.bucketCount, 0, maxCount);
-	int index = 0;
-	for (std::map<int,HistogramChannel*>::iterator it = histogramChannels.begin(); it != histogramChannels.end(); ++it)
 	{
-		glBegin(GL_QUADS);
-		it->second->draw(width, index++);
-		glEnd();
-		glTranslatef(width, 0, 0);
+		GlPushMatrix pm;
+		gluOrtho2D(0, settings.bucketCount, 0, maxCount);
+		int index = 0;
+		for (std::map<int, HistogramChannel*>::iterator it = histogramChannels.begin(); it != histogramChannels.end(); ++it)
+		{
+			it->second->draw(width, index++);
+			glTranslatef(width, 0, 0);
+		}
 	}
-	glPopMatrix();
 }
 
 void Histogram::setMinMax(float min, float max)
@@ -669,22 +665,20 @@ void TimeSeries::add(float *dataVector, int count, int step,int channel)
 }
 void TimeSeries::drawDiagram(void)
 {
-	glPushMatrix();
+	GlPushMatrix pm;
 	gluOrtho2D(limits.minT, limits.maxT, limits.minV, limits.maxV);
 
-	for (std::map<int,DataSeries*>::iterator itr = data.begin(); itr != data.end(); itr++)
+	for (std::map<int, DataSeries*>::iterator itr = data.begin(); itr != data.end(); itr++)
 	{
 		DataStorage &dataVector = itr->second->data;
-		glBegin(GL_LINE_STRIP);
+		GlBegin gb(GlBegin::line_strip);
+
 		setColor(itr->first);
 		for (DataStorage::iterator dataPoint = dataVector.begin(); dataPoint != dataVector.end(); ++dataPoint)
 		{
 			glVertex2fv((*dataPoint).data);
 		}
-		glEnd();
 	}
-
-	glPopMatrix();
 }
 
 LineDiagram::LineDiagram(void):DiagramArea("Line Diagram")
@@ -736,7 +730,7 @@ void LineDiagram::drawDiagram(void)
 {
 	int channel = 0;
 
-	glPushMatrix();
+	GlPushMatrix pm;
 	gluOrtho2D(minX, maxX, minY, maxY);
 
 	for (std::map<int, std::vector<ChannelSample> >::iterator it = channels.begin(); it != channels.end(); ++it)
@@ -744,16 +738,16 @@ void LineDiagram::drawDiagram(void)
 		ChannelSample *samples = it->second.data();
 		int length = it->second.size();
 
-		glBegin(GL_LINE_STRIP);
-		setColor(channel++);
-		while (length--)
 		{
-			glVertex2fv((samples++)->v);
-		}
-		glEnd();
-	}
+			GlBegin gb(GlBegin::line_strip);
 
-	glPopMatrix();
+			setColor(channel++);
+			while (length--)
+			{
+				glVertex2fv((samples++)->v);
+			}
+		}
+	}
 }
 
 /*

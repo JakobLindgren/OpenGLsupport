@@ -3,6 +3,7 @@
 #include <Windows.h>
 #endif
 
+#include "Wrapper.h"
 #include <GL/glu.h>
 
 using namespace OpenGLsupport;
@@ -62,7 +63,7 @@ void VertialDrawArea::draw(void)
 {
 	if (drawables.size()>0)
 	{
-		glPushMatrix();
+		GlPushMatrix pm;
 		gluOrtho2D(-1, 1, -1, -1 + 2*drawables.size());
 		drawables[0]->draw();
 		for (unsigned int i=1;i<drawables.size();i++)
@@ -70,16 +71,14 @@ void VertialDrawArea::draw(void)
 			glTranslatef(0,2,0);
 			drawables[i]->draw();
 		}
-		glPopMatrix();
 	}
 	else
 	{
 		glColor3f(1,0,0);
-		glBegin(GL_LINES);
+		GlBegin gb(GlBegin::lines);
 		glVertex2i(+1,+1);
 		glVertex2i(-1,-1);
 		glVertex2i(-1,+1);
 		glVertex2i(+1,-1);
-		glEnd();
 	}
 }

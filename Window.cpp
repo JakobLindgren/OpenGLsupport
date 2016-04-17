@@ -2,6 +2,7 @@
 #ifdef WIN32
 #include <Windows.h>
 #endif
+#include "Wrapper.h"
 #include <GL/freeglut.h>
 #include <iostream>
 
@@ -114,12 +115,11 @@ void Window::draw(void)
 	else
 	{
 		glColor3f(0,0,0);
-		glBegin(GL_LINES);
+		GlBegin gb(GlBegin::lines);
 		glVertex2i(+1,+1);
 		glVertex2i(-1,-1);
 		glVertex2i(-1,+1);
 		glVertex2i(+1,-1);
-		glEnd();
 	}
 }
 void Window::redisplay(void)
