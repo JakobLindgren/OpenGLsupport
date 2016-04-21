@@ -1,7 +1,13 @@
 #ifdef WIN32
 #include <Windows.h>
-#endif
 #include <GL/GL.h>
+#endif
+
+
+#ifdef __linux__
+#include <GL/gl.h>
+#endif
+
 
 namespace OpenGLsupport
 {

@@ -2,15 +2,111 @@
 
 #include <map>
 #include <vector>
-#include "OpenGLsupport/Font.h"
-#include "OpenGLsupport/Drawable.h"
-#include "CircularBuffer.h"
+#include "Font.h"
+#include "Drawable.h"
+//#include "CircularBuffer.h"
 
+//#include <complex>
 //#include <fftw3.h>
+#if defined(USE_FFTS)
+#include <ffts/ffts.h>
+#endif
+
 
 
 namespace OpenGLsupport
 {
+template<typename T>
+	class CircularBuffer
+	{
+	private:
+		static const unsigned int bits = 1 + 10 + 10;
+		static const int allocationSize = 1 << bits;
+		T *data;
+		unsigned int startIndex;
+		unsigned int endIndex;
+		unsigned int length;
+		unsigned int maxLength;
+
+		static unsigned int stepIndex(unsigned int &index)
+		{
+			index++;
+			if (index == allocationSize)
+				index = 0;
+			return index;
+		}
+	public:
+		class iterator
+		{
+			friend class CircularBuffer;
+		private:
+			unsigned int index;
+			T *data;
+			iterator(unsigned int index, T *data) :index(index), data(data) {}
+		public:
+			bool operator!=(const iterator& other) const
+			{
+				return index != other.index;
+			}
+			T& operator* (void)
+			{
+				return data[index];
+			}
+			void operator++ (void)
+			{
+				if (++index == allocationSize)
+					index = 0;
+			}
+
+		};
+		CircularBuffer(unsigned int maxLength)
+		{
+			this->data = new T[allocationSize];
+			this->startIndex = 0;
+			this->endIndex = 0;
+			this->length = 0;
+			this->maxLength = maxLength;
+		}
+		~CircularBuffer(void)
+		{
+			delete data;
+		}
+
+		unsigned int size(void) const
+		{
+			return (endIndex - startIndex) & (allocationSize - 1);
+		}
+
+		void push_back(T v)
+		{
+			if (size() == maxLength)
+				if (++startIndex == allocationSize)
+					startIndex = 0;
+
+			data[endIndex] = v;
+			if (++endIndex == allocationSize)
+				endIndex = 0;
+		}
+
+		iterator begin(void)
+		{
+			return iterator(startIndex, data);
+		}
+		iterator end(void)
+		{
+			return iterator(endIndex, data);
+		}
+		T& front(void)
+		{
+			return data[startIndex];
+		}
+		T& back(void)
+		{
+			int temp = endIndex;
+			if (temp == 0) temp = allocationSize;
+			return data[temp - 1];
+		}
+	};
 
 	class DiagramArea :public Drawable
 	{
@@ -34,6 +130,7 @@ namespace OpenGLsupport
 			bool firstSample;
 			float min;
 			float max;
+			unsigned int marks;
 
 			struct Label
 			{
@@ -43,12 +140,13 @@ namespace OpenGLsupport
 			};
 
 			std::vector<Label> labels;
-
+			std::string formatString;
 
 			Axis(Font *font);
 			virtual bool setup(float min, float max);
 		public:
-
+		void setFormatString(std::string str);
+		void setNumberOfMarks(unsigned int nr);
 		};
 
 		class VerticalAxis :public Axis
@@ -253,31 +351,63 @@ namespace OpenGLsupport
 
 		void drawDiagram(void) override;
 	};
-	/*
 
-	class Spectrogram : public DiagramWindow
+
+class SpectrogramBase : public DiagramArea
+{
+private:
+		/*
+	struct
 	{
-	private:
-		fftw_complex *inBuffer;
-		fftw_complex *outBuffer;
-		fftw_plan plan;
-
-		float **data;
-		float *bufferData;
-
-		int currentIndex;
-		int N,H;
-
-		std::vector<fftw_complex> inputQueue;
-	public:
-		Spectrogram(int N,int H);
-		virtual ~Spectrogram(void);
+		float *outBuffer;
+		ffts_plan_t *plan;
+	} __ffts;
+*/
+	float **data;
+	float *bufferData;
+	float *xValues;
+	float scale;
 
 
-		virtual void drawDiagram(void);
-		void add(float data);
-		void add(float *dataVector, int count, int step = 1);
-		void execute(void);
-	};
-	*/
+	int minIndexFreq,maxIndexFreq;
+
+	unsigned int H;
+	float fs;
+	bool doLog;
+
+
+protected:
+	unsigned int N;
+	std::vector<float> inputQueue;
+	void setData(float *frequencyData);
+	void rotateLinePointers(void);
+public:
+	SpectrogramBase(std::string name,int N,int H,float fs);
+	virtual ~SpectrogramBase(void);
+
+
+	virtual void drawDiagram(void);
+	void add(float data);
+	void add(float *dataVector, int count, int step = 1);
+	virtual bool execute(void) = 0;
+
+	void setFrequencyRange(float minF,float maxF);
+};
+
+#if defined(USE_FFTS)
+class Spectrogram : public SpectrogramBase
+{
+	struct
+	{
+		float *outBuffer;
+		ffts_plan_t *plan;
+	} __ffts;
+private:
+public:
+	Spectrogram(std::string name,int N,int H,float fs);
+	virtual ~Spectrogram(void);
+
+	bool execute(void) override;
+};
+#endif
 }

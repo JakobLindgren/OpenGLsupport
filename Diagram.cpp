@@ -1,4 +1,4 @@
-#include "DiagramWindow.h"
+#include "Diagram.h"
 #include "Wrapper.h"
 #include <GL/freeglut.h>
 #include <sstream>
@@ -8,11 +8,26 @@
 
 using namespace OpenGLsupport;
 
+static inline double interp1(double x1,double x2,double y1,double y2,double x)
+{
+	return (y2 - y1) * (x - x1) / (x2 - x1) + y1;
+}
+
 
 DiagramArea::Axis::Axis(Font *font) :font(font)
 {
 	font->setHeight(float(FontHeight));
 	firstSample = true;
+	formatString = "%.2f";
+	marks = 5;
+}
+void DiagramArea::Axis::setFormatString(std::string str)
+{
+	formatString = str;
+}
+void DiagramArea::Axis::setNumberOfMarks(unsigned int nr)
+{
+	marks=nr;
 }
 
 bool DiagramArea::Axis::setup(float min, float max)
@@ -43,26 +58,25 @@ bool DiagramArea::Axis::setup(float min, float max)
 
 	if (!updated) return false;
 
-	static const int maxValue = 4;
+	//static const int maxValue = 4;
 	//labels.clear();
-	labels.resize(maxValue+1);
 
-	for (int i = 0; i <= maxValue; i++)
+	if (labels.size() != marks)
+	{
+		labels.resize(marks);
+	}
+
+	for (unsigned int i = 0; i < marks; i++)
 	{
 		Label &label = labels[i];
-		label.value = (min*(i)+max*(maxValue - i)) / maxValue;
-		//labels.push_back(label);
+		label.value = interp1(0,marks-1,min,max,i);
 	}
 
 	for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 	{
-		std::stringstream ss;
-
-		ss.setf(std::ios::fixed, std::ios::floatfield);
-		ss.precision(2);
-
-		ss << it->value;
-		it->str = ss.str();
+		char temp[256];
+		sprintf(temp,formatString.c_str(),it->value);
+		it->str = temp;
 		it->length = font->length(it->str);
 	}
 	return true;
@@ -125,6 +139,7 @@ void DiagramArea::VerticalAxis::draw(int height)
 			glScalef(temp, temp, 1);
 		}
 		font->string(it->str);
+
 	}
 }
 
@@ -180,7 +195,6 @@ void DiagramArea::HorizontalAxis::draw(int width)
 
 	{
 		GlBegin gb(GlBegin::lines);
-
 		glVertex2i(0, 0);
 		glVertex2i(width, 0);
 		for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
@@ -191,7 +205,6 @@ void DiagramArea::HorizontalAxis::draw(int width)
 			glVertex2f(w, -LineLength);
 		}
 	}
-
 	for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 	{
 		float w = (it->value - min) * scale;
@@ -202,6 +215,7 @@ void DiagramArea::HorizontalAxis::draw(int width)
 			glScalef(temp, temp, 1);
 		}
 		font->string(it->str);
+
 	}
 }
 
@@ -267,6 +281,7 @@ void DiagramArea::drawDiagram(void)
 			glVertex2f(b_x, b_y);
 		}
 	}
+
 }
 
 void drawCross(double d)
@@ -314,6 +329,7 @@ void DiagramArea::draw(void)
 		GlPushMatrix pm;
 		gluOrtho2D(0, width, 0, height);
 		{
+
 			GlPushMatrix pm;
 			glTranslatef(float(sizeLeft), float(sizeBottom), 0);
 
@@ -325,6 +341,7 @@ void DiagramArea::draw(void)
 			glTranslatef(1, 1, 0);
 			drawDiagram();
 		}
+
 		{
 			GlPushMatrix pm;
 			glTranslatef((width - titleLength)*0.5f, float(height - FontHeight), 0);
@@ -335,7 +352,9 @@ void DiagramArea::draw(void)
 			glColor3f(0,0,0);
 			font->string(title);
 		}
+
 	}
+
 
 }
 
@@ -750,42 +769,95 @@ void LineDiagram::drawDiagram(void)
 	}
 }
 
-/*
-Spectrogram::Spectrogram(int N,int H) :DiagramWindow("Spectrogram"),N(N),H(H)
+
+SpectrogramBase::SpectrogramBase(std::string name,int N,int H,float fs) :DiagramArea(name),N(N),H(H),fs(fs)
 {
-	inBuffer = new fftw_complex[N];
-	outBuffer = new fftw_complex[N];
-	plan = fftw_plan_dft_1d(N,inBuffer,outBuffer,FFTW_FORWARD,FFTW_ESTIMATE);
+	scale = 1;
+
+
 
 
 
 	bufferData = new float[N*H];
-	float *temp = bufferData;
-	data = new float*[H];
+	memset(bufferData,0,N*H*sizeof(float));
 
+	float *temp = bufferData;
+
+
+	data = new float*[H];
 	for (int i=0;i<H;i++)
 	{
 		data[i] = temp;
 		temp += N;
 	}
-	currentIndex=0;
+
+	xValues = new float[N];
+	bool logX = false;
+
+	if (logX)
+	{
+		double minX = log(1.0/N);
+		for (int i=0;i<N;i++)
+		{
+			double temp = log(float(i+1)/float(N));
+			xValues[i] = interp1(minX,0,0,1,temp);
+		}
+	}
+	else
+	{
+		for (int i=0;i<N;i++)
+		{
+			xValues[i] = float(i)/float(N);
+		}
+	}
+	doLog=true;
+
+
+	hAxis.setFormatString("%.0f");
+	hAxis.setNumberOfMarks(11);
+	setFrequencyRange(0,fs);
+
+	vAxis.setFormatString("%.1f");
+	vAxis.setup(0,H*N / fs);
+
+	//hAxis.setup(0,fs);
+
+
+
+
 
 }
-Spectrogram::~Spectrogram(void)
+SpectrogramBase::~SpectrogramBase(void)
 {
-	fftw_destroy_plan(plan);
-
 	delete data;
 	delete bufferData;
+	delete xValues;
 }
 
-
-void Spectrogram::add(float data)
+void SpectrogramBase::setFrequencyRange(float minF,float maxF)
 {
-	fftw_complex t = {data,0};
-	inputQueue.push_back(t);
+	{
+		minIndexFreq = 0;
+		while (xValues[minIndexFreq]*fs < minF )
+		{
+			minIndexFreq++;
+		}
+	}
+	{
+		maxIndexFreq = N;
+		while (xValues[--maxIndexFreq]*fs > maxF );
+	}
+
+	hAxis.setup(xValues[minIndexFreq]*fs,xValues[maxIndexFreq]*fs);
 }
-void Spectrogram::add(float *dataVector, int count, int step)
+
+
+void SpectrogramBase::add(float data)
+{
+	inputQueue.push_back(data);
+	inputQueue.push_back(0);
+}
+void SpectrogramBase::add(float *dataVector, int count, int step)
 {
 	while (count--)
 	{
@@ -794,57 +866,106 @@ void Spectrogram::add(float *dataVector, int count, int step)
 	}
 }
 
-void Spectrogram::execute(void)
+
+
+void SpectrogramBase::rotateLinePointers(void)
 {
-	while(inputQueue.size()>=N)
+	float *temp = data[0];
+	for (unsigned int i=1;i<H;i++)
 	{
-		//memcpy(inBuffer,inputQueue.data(),N*sizeof(fftw_complex));
+		data[i-1] = data[i];
 	}
+	data[H-1] = temp;
 }
 
+void SpectrogramBase::setData(float *frequencyData)
+{
 
-void Spectrogram::drawDiagram(void)
+	scale*=0.99;
+	float maxAmp = 0;
+	{
+		float *writeLocation = data[0];
+		int cnt = N;
+		while(cnt--)
+		{
+			float r = *(frequencyData++);
+			float i = *(frequencyData++);
+
+			float temp =  sqrt(r*r+i*i);
+			*(writeLocation++) = temp;
+
+			if (maxAmp<temp) maxAmp=temp;
+		}
+	}
+
+	if (scale<maxAmp) scale=maxAmp;
+	{
+		float *ptr = data[0];
+		int cnt = N;
+		while(cnt--)
+		{
+			float temp = *ptr;
+			temp /= scale;
+
+			if (doLog)
+			{
+				temp = 20*log10(temp);
+				temp = interp1(-60,0,0,1,temp);
+				if (temp<0)
+					temp = 0;
+			}
+			*(ptr++) = temp;
+		}
+	}
+	rotateLinePointers();
+}
+
+void SpectrogramBase::drawDiagram(void)
 {
 	glPushMatrix();
-	gluOrtho2D(0, N, 0, H);
+	gluOrtho2D(xValues[minIndexFreq], xValues[maxIndexFreq], H-2,0);
 
-	int bottomIndex = currentIndex-2;
-	int topIndex = currentIndex-1;
-
-	glBegin(GL_QUADS);
-	for (int y=0;y<H;y++)
+	for (unsigned int y=0;y<H-2;y++)
 	{
-		if (bottomIndex<0) bottomIndex+=H;
-		if (topIndex<0) topIndex+=H;
+		float *line1 = data[y+2];
+		float *line2 = data[y+1];
 
-		float *bottom = data[bottomIndex];
-		float *top = data[topIndex];
-
-		for (int x=1;x<N;x++)
+		glBegin(GL_QUAD_STRIP);
+		for (int i=minIndexFreq;i<=maxIndexFreq;i++)
 		{
-			float temp;
-
-			temp = top[x-1];
-			glColor3f(temp,temp,temp);
-			glVertex2i(x-1,y+1);
-
-			temp = top[x];
-			glColor3f(temp,temp,temp);
-			glVertex2i(x,y+1);
-
-			temp = bottom[x];
-			glColor3f(temp,temp,temp);
-			glVertex2i(x,y);
-
-			temp = bottom[x-1];
-			glColor3f(temp,temp,temp);
-			glVertex2i(x-1,y);
+			glColor3f(*line1,*line1,*line1); glVertex3f(xValues[i],y+1,*line1); line1++;
+			glColor3f(*line2,*line2,*line2); glVertex3f(xValues[i],y+0,*line2); line2++;
 		}
-		bottomIndex--;
-		topIndex--;
+		glEnd();
 	}
-	glEnd();
+
 
 	glPopMatrix();
 }
-*/
+
+
+Spectrogram::Spectrogram(std::string name,int N,int H,float fs):SpectrogramBase(name,N,H,fs)
+{
+	__ffts.outBuffer = new float[2*N];
+	__ffts.plan = ffts_init_1d(N, 1);
+
+}
+Spectrogram::~Spectrogram(void)
+{
+	ffts_free(__ffts.plan);
+	delete[] __ffts.outBuffer;
+}
+bool Spectrogram::execute(void)
+{
+	std::cout<<"Spectrogram::execute_ffts"<<std::endl;
+
+	bool res = false;
+	while(inputQueue.size()>=(2*N))
+	{
+		ffts_execute(__ffts.plan,inputQueue.data(), __ffts.outBuffer);
+		inputQueue.erase(inputQueue.begin(),inputQueue.begin()+N);
+		setData(__ffts.outBuffer);
+		res = true;
+	}
+	return res;
+}
