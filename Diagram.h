@@ -261,14 +261,18 @@ template<typename T>
 	{
 	private:
 
-		union DataPoint
+		struct DataPoint
 		{
-			struct
+			int index;
+			union
 			{
-				float t;
-				float y;
+				struct
+				{
+					float t;
+					float y;
+				};
+				float data[2];
 			};
-			float data[2];
 		};
 		//typedef std::vector<DataPoint> DataStorage;
 		typedef CircularBuffer<DataPoint> DataStorage;
@@ -279,7 +283,7 @@ template<typename T>
 			DataStorage data;
 			float minV, maxV;
 
-			DataSeries(unsigned int length) :data(length) {}
+			DataSeries(unsigned int length) :data(length),minV(0),maxV(0) {}
 		};
 		struct Settings
 		{

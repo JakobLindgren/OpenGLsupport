@@ -14,7 +14,7 @@ static inline double interp1(double x1,double x2,double y1,double y2,double x)
 }
 
 
-DiagramArea::Axis::Axis(Font *font) :font(font)
+DiagramArea::Axis::Axis(Font *font) :font(font),min(0),max(1)
 {
 	font->setHeight(float(FontHeight));
 	firstSample = true;
@@ -653,7 +653,7 @@ void TimeSeries::updateMinMax(int channel)
 }
 void TimeSeries::add(float data,int channel)
 {
-	add(&data, 1,channel);
+	add(&data, 1,1,channel);
 }
 void TimeSeries::add(float *dataVector, int count, int step,int channel)
 {
@@ -662,8 +662,10 @@ void TimeSeries::add(float *dataVector, int count, int step,int channel)
 	if (series == 0)
 	{
 		series = new DataSeries(settings.length);
-		DataPoint temp = { 0,*dataVector };
+		DataPoint temp = {0,{ 0,*dataVector }};
 		series->data.push_back(temp);
+		series->minV = *dataVector;
+		series->maxV = *dataVector;
 		dataVector += step;
 		count--;
 	}
@@ -673,7 +675,9 @@ void TimeSeries::add(float *dataVector, int count, int step,int channel)
 		DataStorage &channelVector = series->data;
 		
 		DataPoint temp = channelVector.back();
-		temp.t += settings.dt;
+		temp.index++;
+		temp.t = settings.dt * temp.index;
+		//temp.t+=settings.dt;
 		temp.y = *dataVector;
 		
 		channelVector.push_back(temp);
@@ -770,13 +774,9 @@ void LineDiagram::drawDiagram(void)
 }
 
 
-SpectrogramBase::SpectrogramBase(std::string name,int N,int H,float fs) :DiagramArea(name),N(N),H(H),fs(fs)
+SpectrogramBase::SpectrogramBase(std::string name,int N,int H,float fs) :DiagramArea(name),H(H),fs(fs),N(N)
 {
 	scale = 1;
-
-
-
-
 
 	bufferData = new float[N*H];
 	memset(bufferData,0,N*H*sizeof(float));
@@ -963,7 +963,7 @@ bool Spectrogram::execute(void)
 	while(inputQueue.size()>=(2*N))
 	{
 		ffts_execute(__ffts.plan,inputQueue.data(), __ffts.outBuffer);
-		inputQueue.erase(inputQueue.begin(),inputQueue.begin()+N);
+		inputQueue.erase(inputQueue.begin(),inputQueue.begin()+2*N);
 		setData(__ffts.outBuffer);
 		res = true;
 	}
