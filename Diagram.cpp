@@ -7,8 +7,11 @@
 #include <string.h>
 
 using namespace OpenGLsupport;
-
-static inline double interp1(double x1,double x2,double y1,double y2,double x)
+static inline float interp1(float x1, float x2, float y1, float y2, float x)
+{
+	return (y2 - y1) * (x - x1) / (x2 - x1) + y1;
+}
+static inline double interp1(double x1, double x2, double y1, double y2, double x)
 {
 	return (y2 - y1) * (x - x1) / (x2 - x1) + y1;
 }
@@ -590,10 +593,10 @@ TimeSeries::TimeSeries(std::string name,float T, float dt):DiagramArea(name)
 	settings.dt = dt;
 	settings.keepLimits = false;
 
-	limits.minT = 0;
-	limits.maxT = 1e-9;
-	limits.minV = -1e-9;
-	limits.maxV = +1e-9;
+	limits.minT = 0.0f;
+	limits.maxT = 1e-9f;
+	limits.minV = -1e-9f;
+	limits.maxV = +1e-9f;
 
 	vAxis.setup(limits.minV, limits.maxV);
 	hAxis.setup(limits.minT, limits.maxT);
@@ -796,10 +799,10 @@ SpectrogramBase::SpectrogramBase(std::string name,int N,int H,float fs) :Diagram
 
 	if (logX)
 	{
-		double minX = log(1.0/N);
+		float minX = log(1.0f/N);
 		for (int i=0;i<N;i++)
 		{
-			double temp = log(float(i+1)/float(N));
+			float temp = log(float(i+1)/float(N));
 			xValues[i] = interp1(minX,0,0,1,temp);
 		}
 	}
@@ -943,7 +946,7 @@ void SpectrogramBase::drawDiagram(void)
 	glPopMatrix();
 }
 
-
+#if defined(USE_FFTS)
 Spectrogram::Spectrogram(std::string name,int N,int H,float fs):SpectrogramBase(name,N,H,fs)
 {
 	__ffts.outBuffer = new float[2*N];
@@ -969,3 +972,4 @@ bool Spectrogram::execute(void)
 	}
 	return res;
 }
+#endif
