@@ -59,7 +59,7 @@ GlColor::GlColor(std::string html)
 	for (int i = 0; i < 4; i++)
 		v_ub[i] = 255;
 
-	for (int i = 0; i < html.length(); i+=2)
+	for (unsigned int i = 0; i < html.length(); i+=2)
 	{
 		unsigned char data = 0;
 		for (int j = 0; j < 2; j++)

@@ -1,6 +1,6 @@
 #include "Geomerty.h"
 
-#include <GL\GLU.h>
+#include <GL/glu.h>
 
 using namespace OpenGLsupport;
 
