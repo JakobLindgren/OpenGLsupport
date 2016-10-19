@@ -93,6 +93,7 @@ namespace OpenGLsupport
 		void toDouble(void);
 		void toByte(void);
 	public:
+		GlColor(const GlColor& other);
 		GlColor(std::string html);
 		GlColor(double r, double g, double b,double a=1);
 		GlColor(double v[4]);
@@ -104,8 +105,8 @@ namespace OpenGLsupport
 		void get(unsigned char &r, unsigned char &g, unsigned char &b) const;
 		void get(unsigned char &r, unsigned char &g, unsigned char &b, unsigned char &a) const;
 
-		double const* get_dv(void) const;
-		unsigned char const* get_ubv(void) const;
+		double const*const get_dv(void) const;
+		unsigned char const*const get_ubv(void) const;
 	};
 
 }

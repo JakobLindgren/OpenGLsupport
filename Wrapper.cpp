@@ -53,7 +53,18 @@ void GlColor::toByte(void)
 	}
 }
 
+GlColor::GlColor(const GlColor& other)
+{
+	v_d[0] = other.v_d[0];
+	v_d[1] = other.v_d[1];
+	v_d[2] = other.v_d[2];
+	v_d[3] = other.v_d[3];
 
+	v_ub[0] = other.v_ub[0];
+	v_ub[1] = other.v_ub[1];
+	v_ub[2] = other.v_ub[2];
+	v_ub[3] = other.v_ub[3];
+}
 GlColor::GlColor(std::string html)
 {
 	for (int i = 0; i < 4; i++)
@@ -138,11 +149,11 @@ void GlColor::get(unsigned char &r, unsigned char &g, unsigned char &b, unsigned
 	a = a_ub;
 }
 
-double const* GlColor::get_dv(void) const
+double const*const GlColor::get_dv(void) const
 {
 	return v_d;
 }
-unsigned char const* GlColor::get_ubv(void) const
+unsigned char const*const GlColor::get_ubv(void) const
 {
 	return v_ub;
 }

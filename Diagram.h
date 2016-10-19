@@ -4,12 +4,13 @@
 #include <vector>
 #include "Font.h"
 #include "Drawable.h"
+#include "ColorPalette.h"
 //#include "CircularBuffer.h"
 
 //#include <complex>
 //#include <fftw3.h>
 #if defined(USE_FFTS)
-#include <ffts/ffts.h>
+#include <ffts.h>
 #endif
 
 
@@ -367,8 +368,16 @@ private:
 		ffts_plan_t *plan;
 	} __ffts;
 */
-	float **data;
-	float *bufferData;
+	union RGB
+	{
+		struct
+		{
+			float R,G,B,raw;
+		};
+		float color[4];
+	};
+	RGB **data;
+	RGB *bufferData;
 	float *xValues;
 	float scale;
 
@@ -376,12 +385,16 @@ private:
 	int minIndexFreq,maxIndexFreq;
 
 	unsigned int H;
+
 	float fs;
 	bool doLog;
 
+	ColorPalette *colorPalette;
 
 protected:
 	unsigned int N;
+	unsigned int advancement;
+
 	std::vector<float> inputQueue;
 	void setData(float *frequencyData);
 	void rotateLinePointers(void);
@@ -393,6 +406,8 @@ public:
 	virtual void drawDiagram(void);
 	void add(float data);
 	void add(float *dataVector, int count, int step = 1);
+	void setColorPalette(ColorPalette *colorPalette);
+	void setAdvancement(int value);
 	virtual bool execute(void) = 0;
 
 	void setFrequencyRange(float minF,float maxF);
