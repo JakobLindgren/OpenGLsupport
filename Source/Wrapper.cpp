@@ -1,4 +1,4 @@
-#include "Wrapper.h"
+#include "../Include/Wrapper.h"
 using namespace OpenGLsupport;
 
 GlBegin::GlBegin(DrawMode mode)

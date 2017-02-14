@@ -1,5 +1,5 @@
-#include "Diagram.h"
-#include "Wrapper.h"
+#include "../Include/Diagram.h"
+#include "../Include/Wrapper.h"
 #include <GL/freeglut.h>
 #include <sstream>
 #include <iostream>
@@ -17,7 +17,7 @@ static inline double interp1(double x1, double x2, double y1, double y2, double 
 }
 
 
-DiagramArea::Axis::Axis(Font *font) :font(font),min(0),max(1)
+DiagramArea::Axis::Axis(Font *font) :font(font),minValue(0),maxValue(1)
 {
 	font->setHeight(float(FontHeight));
 	firstSample = true;
@@ -40,21 +40,21 @@ bool DiagramArea::Axis::setup(float min, float max)
 
 	if (firstSample)
 	{
-		this->min = min;
-		this->max = max;
+		this->minValue = min;
+		this->maxValue = max;
 		updated = true;
 	}
 	else
 	{
 
-		if (this->min > min)
+		if (this->minValue > min)
 		{
-			this->min = min;
+			this->minValue = min;
 			updated = true;
 		}
-		if (this->max < max)
+		if (this->maxValue < max)
 		{
-			this->max = max;
+			this->maxValue = max;
 			updated = true;
 		}
 	}
@@ -116,7 +116,7 @@ int DiagramArea::VerticalAxis::bottomOffset(void)
 
 void DiagramArea::VerticalAxis::draw(int height)
 {
-	float scale = height / (max - min);
+	float scale = height / (maxValue - minValue);
 
 	{
 		GlBegin gb(DrawMode::lines);
@@ -125,7 +125,7 @@ void DiagramArea::VerticalAxis::draw(int height)
 		glVertex2i(0, height);
 		for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 		{
-			float h = (it->value - min) * scale;
+			float h = (it->value - minValue) * scale;
 			glVertex2f(0, h);
 			glVertex2f(-LineLength, h);
 		}
@@ -133,7 +133,7 @@ void DiagramArea::VerticalAxis::draw(int height)
 
 	for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 	{
-		float h = (it->value - min) * scale;
+		float h = (it->value - minValue) * scale;
 
 		GlPushMatrix pm;
 		glTranslatef(-it->length - LineLength, h, 0);
@@ -194,7 +194,7 @@ int DiagramArea::HorizontalAxis::rightOffset(void)
 }
 void DiagramArea::HorizontalAxis::draw(int width)
 {
-	float scale = width / (max - min);
+	float scale = width / (maxValue - minValue);
 
 	{
 		GlBegin gb(DrawMode::lines);
@@ -202,7 +202,7 @@ void DiagramArea::HorizontalAxis::draw(int width)
 		glVertex2i(width, 0);
 		for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 		{
-			float w = (it->value - min) * scale;
+			float w = (it->value - minValue) * scale;
 
 			glVertex2f(w, 0);
 			glVertex2f(w, -LineLength);
@@ -210,7 +210,7 @@ void DiagramArea::HorizontalAxis::draw(int width)
 	}
 	for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 	{
-		float w = (it->value - min) * scale;
+		float w = (it->value - minValue) * scale;
 		GlPushMatrix pm;
 		glTranslated(w - it->length *0.5, -LineLength - FontHeight, 0);
 		{

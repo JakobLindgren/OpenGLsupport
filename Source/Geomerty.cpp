@@ -1,4 +1,4 @@
-#include "Geomerty.h"
+#include "../Include/Geomerty.h"
 
 #include <GL/glu.h>
 

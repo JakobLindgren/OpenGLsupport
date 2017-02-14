@@ -1,9 +1,9 @@
-#include "DrawArea.h"
+#include "../Include/DrawArea.h"
 #ifdef WIN32
 #include <Windows.h>
 #endif
 
-#include "Wrapper.h"
+#include "../Include/Wrapper.h"
 #include <GL/glu.h>
 
 using namespace OpenGLsupport;
@@ -25,7 +25,7 @@ void DrawArea::setDrawBorder(bool value)
 }
 void DrawArea::drawThinBorder(void)
 {
-	GlBegin gb(GlBegin::line_loop);
+	GlBegin gb(DrawMode::line_loop);
 	glVertex2i(+1,+1);
 	glVertex2i(+1,-1);
 	glVertex2i(-1,-1);
@@ -33,7 +33,7 @@ void DrawArea::drawThinBorder(void)
 }
 void DrawArea::drawThinCross(void)
 {
-	GlBegin gb(GlBegin::lines);
+	GlBegin gb(DrawMode::lines);
 	glVertex2i(+1,+1);
 	glVertex2i(-1,-1);
 	glVertex2i(-1,+1);

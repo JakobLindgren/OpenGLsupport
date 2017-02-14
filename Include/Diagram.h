@@ -133,8 +133,8 @@ template<typename T>
 
 			Font *font;
 			bool firstSample;
-			float min;
-			float max;
+			float minValue;
+			float maxValue;
 			unsigned int marks;
 
 			struct Label

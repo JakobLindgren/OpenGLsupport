@@ -1,8 +1,8 @@
-#include "Window.h"
+#include "../Include/Window.h"
 #ifdef WIN32
 #include <Windows.h>
 #endif
-#include "Wrapper.h"
+#include "../Include/Wrapper.h"
 #include <GL/freeglut.h>
 #include <iostream>
 
