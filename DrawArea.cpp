@@ -75,7 +75,7 @@ void VertialDrawArea::draw(void)
 	else
 	{
 		glColor3f(1,0,0);
-		GlBegin gb(GlBegin::lines);
+		GlBegin gb(DrawMode::lines);
 		glVertex2i(+1,+1);
 		glVertex2i(-1,-1);
 		glVertex2i(-1,+1);

@@ -8,93 +8,156 @@
 
 using namespace OpenGLsupport;
 
-std::map<int, Window*> Window::ActiveWindows;
-std::mutex Window::Windowlock;
-std::thread* Window::mainloop = 0;
+std::vector<Window*> WindowManager::startingWindows;
+std::map<int, Window*> WindowManager::activeWindows;
+std::vector<Window*> WindowManager::endingWindows;
 
-void Window::init(int argc, char **argv)
+
+std::mutex WindowManager::Windowlock;
+std::thread* WindowManager::mainloop = 0;
+bool WindowManager::runMainLoop = true;
+
+void WindowManager::start(Window *window)
+{
+	Windowlock.lock();
+	startingWindows.push_back(window);
+	Windowlock.unlock();
+}
+void WindowManager::end(Window *window)
+{
+	Windowlock.lock();
+	endingWindows.push_back(window);
+	Windowlock.unlock();
+	while (window->window) Sleep(100);
+}
+
+
+
+
+
+void WindowManager::init(int argc, char **argv)
 {
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
-	glutInitWindowSize(400, 300);
-	glutIdleFunc(Window::staticIdle);
+	glutInitWindowSize(400, 400);
+	
+
+	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
 }
-void Window::mainLoop(bool inThread)
+void WindowManager::mainLoop(bool inThread)
 {
+	runMainLoop = true;
 	if (inThread)
 	{
 		if (mainloop == 0)
 		{
-			mainloop = new std::thread(glutMainLoop);
+			mainloop = new std::thread(&WindowManager::mainLoop,false);
 		}
 	}
 	else
 	{
-		glutMainLoop();
+		while (runMainLoop)
+		{
+			if (startingWindows.size())
+			{
+				Windowlock.lock();
+				for (std::vector<Window*>::iterator itr = startingWindows.begin(); itr != startingWindows.end(); itr++)
+				{
+					Window *wPtr = *itr;
+					std::string windowName = wPtr->name;
+					int windowIndex = glutCreateWindow(windowName.c_str());
+
+					wPtr->window = windowIndex;
+					activeWindows[windowIndex] = wPtr;
+					glClearColor(1, 1, 1, 1);
+					glutDisplayFunc(WindowManager::staticDraw);
+					glutReshapeFunc(WindowManager::staticReshape);
+				}
+				startingWindows.clear();
+				Windowlock.unlock();
+			}
+			if (endingWindows.size())
+			{
+				Windowlock.lock();
+				for (auto w = endingWindows.begin(); w != endingWindows.end(); w++)
+				{
+					activeWindows.erase((*w)->window);
+					(*w)->window = 0;
+				}
+				endingWindows.clear();
+				Windowlock.unlock();
+			}
+			checkRedraw();
+			if (activeWindows.size())
+			{
+				glutMainLoopEvent();
+			}
+			else
+			{
+				Sleep(100);
+			}
+		}
 	}
 }
 
-void Window::staticDraw(void)
+void OpenGLsupport::WindowManager::stopMainLoop(void)
+{
+	runMainLoop = false;
+}
+
+void WindowManager::staticDraw(void)
 {
 	glClear(GL_COLOR_BUFFER_BIT | GL_DEPTH_BUFFER_BIT);
 	glMatrixMode(GL_MODELVIEW);
 	glLoadIdentity();
-	Windowlock.lock();
-	ActiveWindows[glutGetWindow()]->draw();
-	Windowlock.unlock();
+	activeWindows[glutGetWindow()]->draw();
 	glutSwapBuffers();
 }
 
-void Window::staticReshape(int w, int h)
+void WindowManager::staticReshape(int w, int h)
 {
-	Windowlock.lock();
-	ActiveWindows[glutGetWindow()]->reshape(w,h);
-	Windowlock.unlock();
+	activeWindows[glutGetWindow()]->reshape(w,h);
 }
 
-void Window::staticIdle(void)
+void WindowManager::checkRedraw(void)
 {
-	Windowlock.lock();
-	for (std::map<int, Window*>::iterator itr = ActiveWindows.begin();itr != ActiveWindows.end();itr++)
+	for (std::map<int, Window*>::iterator itr = activeWindows.begin();itr != activeWindows.end();itr++)
 	{
 		itr->second->checkRedraw();
 	}
-	Windowlock.unlock();
 }
 
 
 
 
 
-Window::Window(std::string name,Drawable *drawable):drawable(drawable)
+Window::Window(std::string name,Drawable *drawable):drawable(drawable), name(name)
 {
 	width = 1;
 	height = 1;
 	lastRedraw=0;
 	currentRedraw=0;
 
-	window = glutCreateWindow(name.c_str());
+	//window = glutCreateWindow(name.c_str());
+	window = 0;
 
-	Windowlock.lock();
-	ActiveWindows[window] = this;
-	Windowlock.unlock();
 
-	glClearColor(1, 1, 1, 1);
-	glutDisplayFunc(Window::staticDraw);
-	glutReshapeFunc(Window::staticReshape);
+
+
+	WindowManager::start(this);
 }
 Window::~Window(void)
 {
 	std::cerr<<"~Window"<<std::endl;
-	Windowlock.lock();
-	ActiveWindows.erase(window);
-	Windowlock.unlock();
-	glutDestroyWindow(window);
-
+	WindowManager::end(this);
 	if (deleteChildren)
 	{
 		delete drawable;
 	}
+}
+void Window::setDrawable(Drawable *drawable)
+{
+	this->drawable = drawable;
 }
 
 void Window::reshape(int w, int h)
@@ -115,7 +178,7 @@ void Window::draw(void)
 	else
 	{
 		glColor3f(0,0,0);
-		GlBegin gb(GlBegin::lines);
+		GlBegin gb(DrawMode::lines);
 		glVertex2i(+1,+1);
 		glVertex2i(-1,-1);
 		glVertex2i(-1,+1);

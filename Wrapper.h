@@ -1,7 +1,7 @@
 #pragma once
 
 #include <string>
-
+#include "Constants.h"
 #ifdef WIN32
 #include <Windows.h>
 #include <GL/GL.h>
@@ -18,20 +18,8 @@ namespace OpenGLsupport
 	class GlBegin
 	{
 	public:
-		enum Mode {
-			points = GL_POINTS,
-			lines = GL_LINES,
-			line_strip = GL_LINE_STRIP,
-			line_loop = GL_LINE_LOOP,
-			triangles = GL_TRIANGLES,
-			triangle_strip = GL_TRIANGLE_STRIP,
-			triangle_fan = GL_TRIANGLE_FAN,
-			quads = GL_QUADS,
-			quad_strip = GL_QUAD_STRIP,
-			polygon = GL_POLYGON,
-		};
 	public:
-		GlBegin(Mode mode);
+		GlBegin(DrawMode mode);
 		~GlBegin(void);
 	};
 
@@ -95,9 +83,9 @@ namespace OpenGLsupport
 	public:
 		GlColor(std::string html);
 		GlColor(double r, double g, double b,double a=1);
-		GlColor(double v[4]);
+		GlColor(double *v,int length);
 		GlColor(unsigned char r, unsigned char g, unsigned char b, unsigned char a=255);
-		GlColor(unsigned char v[4]);
+		GlColor(unsigned char  *v, int length);
 		void set(void) const;
 		void get(double &r, double &g, double &b) const;
 		void get(double &r, double &g, double &b, double &a) const;

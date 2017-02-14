@@ -4,6 +4,9 @@
 #include <vector>
 #include "Font.h"
 #include "Drawable.h"
+#if defined(USE_JAKOB_FFT)
+#include "FFT.h"
+#endif
 //#include "CircularBuffer.h"
 
 //#include <complex>
@@ -330,24 +333,28 @@ template<typename T>
 		float minY;
 		float maxY;
 	public:
-		LineDiagram(void);
+		LineDiagram(std::string name);
 		inline void add(float x, float y, int channel = 0)
 		{
 			ChannelSample sample = { x,y };
 			add(sample, channel);
 		}
-		inline void add(float *x, float *y, int count, int channel = 0)
-		{
-			while (count--)
-			{
-				add(*(x++), *(y++), channel);
-			}
-		}
 		inline void add(ChannelSample sample, int channel = 0)
 		{
 			add(&sample, 1, channel);
 		}
+		inline void add(std::vector<double> &x, std::vector<double> &y, int channel = 0)
+		{
+			int lenX = x.size();
+			int lenY = y.size();
+			int length = lenX < lenY ? lenX : lenY;
+			add(x.data(), y.data(), length, channel);
+		}
 		void add(ChannelSample *sample, int count, int channel = 0);
+		void add(double *x, double *y, int count, int channel = 0);
+		void add(float *x, float *y, int count, int channel = 0);
+
+		void clear(int channel = 0);
 
 		void drawDiagram(void) override;
 	};
@@ -381,14 +388,16 @@ protected:
 	std::vector<float> inputQueue;
 	void setData(float *frequencyData);
 	void rotateLinePointers(void);
+
+	bool useComplexBuffer;
+	void addAsComplex(float data);
 public:
-	SpectrogramBase(std::string name,int N,int H,float fs);
+	SpectrogramBase(std::string name,int N,int H,float fs,bool useComplexBuffer);
 	virtual ~SpectrogramBase(void);
 
 
 	virtual void drawDiagram(void);
-	void add(float data);
-	void add(float *dataVector, int count, int step = 1);
+	virtual void add(float *dataVector, int count, int step = 1);
 	virtual bool execute(void) = 0;
 
 	void setFrequencyRange(float minF,float maxF);
@@ -405,6 +414,20 @@ class Spectrogram : public SpectrogramBase
 private:
 public:
 	Spectrogram(std::string name,int N,int H,float fs);
+	virtual ~Spectrogram(void);
+
+	bool execute(void) override;
+};
+#endif
+
+#if defined(USE_JAKOB_FFT)
+class Spectrogram : public SpectrogramBase
+{
+private:
+	FFT fft;
+	float *outData;
+public:
+	Spectrogram(std::string name, int N, int H, float fs);
 	virtual ~Spectrogram(void);
 
 	bool execute(void) override;

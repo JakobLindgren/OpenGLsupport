@@ -1,7 +1,7 @@
 #include "Wrapper.h"
 using namespace OpenGLsupport;
 
-GlBegin::GlBegin(Mode mode)
+GlBegin::GlBegin(DrawMode mode)
 {
 	glBegin(mode);
 }
@@ -85,8 +85,26 @@ GlColor::GlColor(std::string html)
 	toDouble();
 }
 
-GlColor::GlColor(double v[4]) :GlColor(v[0], v[1], v[2], v[3]) {}
-GlColor::GlColor(unsigned char v[4]) : GlColor(v[0], v[1], v[2], v[3]) {}
+GlColor::GlColor(double *v, int count)
+{
+	if (count > 4)
+		count = 4;
+	for (int i = 0; i < count; i++)
+	{
+		v_d[i] = v[i];
+	}
+	toByte();
+}
+GlColor::GlColor(unsigned char *v, int count)
+{
+	if (count > 4)
+		count = 4;
+	for (int i = 0; i < count; i++)
+	{
+		v_ub[i] = v[i];
+	}
+	toDouble();
+}
 
 
 GlColor::GlColor(double r, double g, double b, double a)

@@ -1,5 +1,6 @@
 #pragma once
 #include <map>
+#include <vector>
 #include <mutex>
 #include <thread>
 #include <string>
@@ -7,28 +8,41 @@
 #include "Drawable.h"
 namespace OpenGLsupport
 {
+	class Window;
+	class WindowManager
+	{
+	private:
+		static std::vector<Window*> startingWindows;
+		static std::map<int, Window*> activeWindows;
+		static std::vector<Window*> endingWindows;
+		static std::mutex Windowlock;
+		static std::thread *mainloop;
+		static bool runMainLoop;
+
+		//static void staticIdle(void);
+		static void staticDraw(void);
+		static void staticReshape(int w, int h);
+		static void checkRedraw(void);
+	public:
+		static void start(Window *window);
+		static void end(Window *window);
+	public:
+		static void init(int argv, char **argc);
+		static void mainLoop(bool inThread = true);
+		static void stopMainLoop(void);
+	};
 
 	class Window:public DrawableContainer
 	{
-	private:
-		static std::map<int, Window*> ActiveWindows;
-		static std::mutex Windowlock;
-		static std::thread *mainloop;
-		static void staticIdle(void);
-		static void staticDraw(void);
-		static void staticReshape(int w, int h);
-	public:
-		static void init(int argv, char **argc);
-		static void mainLoop(bool inThread=true);
-
-
+		friend class WindowManager;
+		int window;
 	private:
 		//bool redisplayFlag;
 		unsigned int lastRedraw;
 		unsigned int currentRedraw;
 		void checkRedraw(void);
-		//std::string name;
-		int window;
+		std::string name;
+		//int window;
 		Drawable *drawable;
 	protected:
 		int width;
@@ -38,6 +52,9 @@ namespace OpenGLsupport
 		virtual ~Window(void);
 		virtual void draw(void);
 		virtual void reshape(int w, int h);
+		
+		void setDrawable(Drawable *drawable);
+
 		void redisplay(void);
 		void getLocation(int &x,int &y);
 		void setLocation(int x,int y);
