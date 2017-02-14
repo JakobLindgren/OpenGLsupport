@@ -17,7 +17,7 @@ static inline double interp1(double x1, double x2, double y1, double y2, double 
 }
 
 
-DiagramArea::Axis::Axis(Font *font) :font(font)
+DiagramArea::Axis::Axis(Font *font) :font(font),min(0),max(1)
 {
 	font->setHeight(float(FontHeight));
 	firstSample = true;
@@ -665,8 +665,10 @@ void TimeSeries::add(float *dataVector, int count, int step,int channel)
 	if (series == 0)
 	{
 		series = new DataSeries(settings.length);
-		DataPoint temp = { 0,*dataVector };
+		DataPoint temp = {0,{ 0,*dataVector }};
 		series->data.push_back(temp);
+		series->minV = *dataVector;
+		series->maxV = *dataVector;
 		dataVector += step;
 		count--;
 	}
@@ -676,7 +678,9 @@ void TimeSeries::add(float *dataVector, int count, int step,int channel)
 		DataStorage &channelVector = series->data;
 		
 		DataPoint temp = channelVector.back();
-		temp.t += settings.dt;
+		temp.index++;
+		temp.t = settings.dt * temp.index;
+		//temp.t+=settings.dt;
 		temp.y = *dataVector;
 		
 		channelVector.push_back(temp);
@@ -864,19 +868,17 @@ void LineDiagram::drawDiagram(void)
 
 SpectrogramBase::SpectrogramBase(std::string name,int N,int H,float fs, bool useComplexBuffer) :DiagramArea(name),N(N),H(H),fs(fs), useComplexBuffer(useComplexBuffer)
 {
-	scale = 1;
+	advancement = N / 2;
+	colorPalette = 0;
+	scale = 2.0/float(N);
+
+	bufferData = new RGB[N*H];
+	memset(bufferData,0,N*H*sizeof(RGB));
+
+	RGB *temp = bufferData;
 
 
-
-
-
-	bufferData = new float[N*H];
-	memset(bufferData,0,N*H*sizeof(float));
-
-	float *temp = bufferData;
-
-
-	data = new float*[H];
+	data = new RGB*[H];
 	for (int i=0;i<H;i++)
 	{
 		data[i] = temp;
@@ -910,7 +912,7 @@ SpectrogramBase::SpectrogramBase(std::string name,int N,int H,float fs, bool use
 	setFrequencyRange(0,fs);
 
 	vAxis.setFormatString("%.1f");
-	vAxis.setup(0,H*N / fs);
+	vAxis.setup(0,H*advancement / fs);
 
 	//hAxis.setup(0,fs);
 
@@ -924,6 +926,11 @@ SpectrogramBase::~SpectrogramBase(void)
 	delete data;
 	delete bufferData;
 	delete xValues;
+}
+
+void OpenGLsupport::SpectrogramBase::setAdvancement(int value)
+{
+	advancement = value;
 }
 
 void SpectrogramBase::setFrequencyRange(float minF,float maxF)
@@ -971,12 +978,16 @@ void SpectrogramBase::add(float *dataVector, int count, int step)
 		}
 	}
 }
+void SpectrogramBase::setColorPalette(ColorPalette *colorPalette)
+{
+	this->colorPalette = colorPalette;
+}
 
 
 
 void SpectrogramBase::rotateLinePointers(void)
 {
-	float *temp = data[0];
+	RGB *temp = data[0];
 	for (unsigned int i=1;i<H;i++)
 	{
 		data[i-1] = data[i];
@@ -986,43 +997,40 @@ void SpectrogramBase::rotateLinePointers(void)
 
 void SpectrogramBase::setData(float *frequencyData)
 {
-
-	scale*=0.99;
-	float maxAmp = 0;
 	{
-		float *writeLocation = data[0];
-		int cnt = N;
-		while(cnt--)
+		RGB *writeLocation = data[0]+minIndexFreq;
+		float *readLocation = frequencyData + minIndexFreq;
+		for (unsigned int i=0;i<=N;i++)
 		{
-			float r = *(frequencyData++);
-			float i = *(frequencyData++);
+			float real = *(readLocation++);
+			float imag = *(readLocation++);
 
-			float temp =  sqrt(r*r+i*i);
-			*(writeLocation++) = temp;
+			float temp =  sqrt(real*real+imag*imag) * scale;
+			temp = 20*log10(temp);
 
-			if (maxAmp<temp) maxAmp=temp;
-		}
-	}
+			writeLocation->raw = interp1(-320,0,0,1,temp);
+			if (writeLocation->raw<0)
+				writeLocation->raw = 0;
 
-	if (scale<maxAmp) scale=maxAmp;
-	{
-		float *ptr = data[0];
-		int cnt = N;
-		while(cnt--)
-		{
-			float temp = *ptr;
-			temp /= scale;
 
-			if (doLog)
+			if (colorPalette)
 			{
-				temp = 20*log10(temp);
-				temp = interp1(-60,0,0,1,temp);
-				if (temp<0)
-					temp = 0;
+				colorPalette->getColor(temp,writeLocation->color);
 			}
-			*(ptr++) = temp;
+			else
+			{
+				writeLocation->R = writeLocation->raw;
+				writeLocation->G = writeLocation->raw;
+				writeLocation->B = writeLocation->raw;
+			}
+
+
+
+			writeLocation++;
 		}
 	}
+
+
 	rotateLinePointers();
 }
 
@@ -1033,14 +1041,17 @@ void SpectrogramBase::drawDiagram(void)
 
 	for (unsigned int y=0;y<H-2;y++)
 	{
-		float *line1 = data[y+2];
-		float *line2 = data[y+1];
+		RGB *line1 = data[y+2] + minIndexFreq;
+		RGB *line2 = data[y+1] + minIndexFreq;
 
 		glBegin(GL_QUAD_STRIP);
 		for (int i=minIndexFreq;i<=maxIndexFreq;i++)
 		{
-			glColor3f(*line1,*line1,*line1); glVertex3f(xValues[i],y+1,*line1); line1++;
-			glColor3f(*line2,*line2,*line2); glVertex3f(xValues[i],y+0,*line2); line2++;
+			//glColor3f(*line1,*line1,*line1); glVertex3f(xValues[i],y+1,*line1); line1++;
+			//glColor3f(*line2,*line2,*line2); glVertex3f(xValues[i],y+0,*line2); line2++;
+
+			glColor3fv(line1->color); glVertex3f(xValues[i],y+1,line1->raw); line1++;
+			glColor3fv(line2->color); glVertex3f(xValues[i],y+0,line2->raw); line2++;
 		}
 		glEnd();
 	}
@@ -1069,7 +1080,7 @@ bool Spectrogram::execute(void)
 	while(inputQueue.size()>=(2*N))
 	{
 		ffts_execute(__ffts.plan,inputQueue.data(), __ffts.outBuffer);
-		inputQueue.erase(inputQueue.begin(),inputQueue.begin()+N);
+		inputQueue.erase(inputQueue.begin(),inputQueue.begin()+2*advancement);
 		setData(__ffts.outBuffer);
 		res = true;
 	}

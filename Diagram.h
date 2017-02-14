@@ -7,12 +7,14 @@
 #if defined(USE_JAKOB_FFT)
 #include "FFT.h"
 #endif
+
+#include "ColorPalette.h"
 //#include "CircularBuffer.h"
 
 //#include <complex>
 //#include <fftw3.h>
 #if defined(USE_FFTS)
-#include <ffts/ffts.h>
+#include <ffts.h>
 #endif
 
 
@@ -264,14 +266,18 @@ template<typename T>
 	{
 	private:
 
-		union DataPoint
+		struct DataPoint
 		{
-			struct
+			int index;
+			union
 			{
-				float t;
-				float y;
+				struct
+				{
+					float t;
+					float y;
+				};
+				float data[2];
 			};
-			float data[2];
 		};
 		//typedef std::vector<DataPoint> DataStorage;
 		typedef CircularBuffer<DataPoint> DataStorage;
@@ -282,7 +288,7 @@ template<typename T>
 			DataStorage data;
 			float minV, maxV;
 
-			DataSeries(unsigned int length) :data(length) {}
+			DataSeries(unsigned int length) :data(length),minV(0),maxV(0) {}
 		};
 		struct Settings
 		{
@@ -370,8 +376,16 @@ private:
 		ffts_plan_t *plan;
 	} __ffts;
 */
-	float **data;
-	float *bufferData;
+	union RGB
+	{
+		struct
+		{
+			float R,G,B,raw;
+		};
+		float color[4];
+	};
+	RGB **data;
+	RGB *bufferData;
 	float *xValues;
 	float scale;
 
@@ -379,12 +393,16 @@ private:
 	int minIndexFreq,maxIndexFreq;
 
 	unsigned int H;
+
 	float fs;
 	bool doLog;
 
+	ColorPalette *colorPalette;
 
 protected:
 	unsigned int N;
+	unsigned int advancement;
+
 	std::vector<float> inputQueue;
 	void setData(float *frequencyData);
 	void rotateLinePointers(void);
@@ -398,6 +416,8 @@ public:
 
 	virtual void drawDiagram(void);
 	virtual void add(float *dataVector, int count, int step = 1);
+	void setColorPalette(ColorPalette *colorPalette);
+	void setAdvancement(int value);
 	virtual bool execute(void) = 0;
 
 	void setFrequencyRange(float minF,float maxF);
