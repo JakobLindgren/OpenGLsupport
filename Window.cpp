@@ -17,7 +17,8 @@ void Window::init(int argc, char **argv)
 	glutInit(&argc, argv);
 	glutInitDisplayMode(GLUT_DOUBLE | GLUT_RGB);
 	glutInitWindowSize(400, 300);
-	glutIdleFunc(Window::staticIdle);
+	//glutIdleFunc(Window::staticIdle);
+	glutTimerFunc(50,Window::staticTimer,0);
 }
 void Window::mainLoop(bool inThread)
 {
@@ -60,6 +61,16 @@ void Window::staticIdle(void)
 		itr->second->checkRedraw();
 	}
 	Windowlock.unlock();
+}
+void Window::staticTimer(int value)
+{
+	Windowlock.lock();
+	for (std::map<int, Window*>::iterator itr = ActiveWindows.begin();itr != ActiveWindows.end();itr++)
+	{
+		itr->second->checkRedraw();
+	}
+	Windowlock.unlock();
+	glutTimerFunc(50,Window::staticTimer,0);
 }
 
 

@@ -15,6 +15,7 @@ namespace OpenGLsupport
 		static std::mutex Windowlock;
 		static std::thread *mainloop;
 		static void staticIdle(void);
+		static void staticTimer(int value);
 		static void staticDraw(void);
 		static void staticReshape(int w, int h);
 	public:
