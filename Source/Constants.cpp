@@ -3,7 +3,7 @@
 #include <Windows.h>
 #endif
 
-#include <GL\GL.h>
+#include <GL/gl.h>
 bool OpenGLsupport::validateConstants(void)
 {
 if (points != GL_POINTS) return false;

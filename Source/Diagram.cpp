@@ -875,14 +875,14 @@ SpectrogramBase::SpectrogramBase(std::string name,int N,int H,float fs, bool use
 	bufferData = new RGB[N*H];
 	memset(bufferData,0,N*H*sizeof(RGB));
 
-	RGB *temp = bufferData;
-
-
-	data = new RGB*[H];
-	for (int i=0;i<H;i++)
 	{
-		data[i] = temp;
-		temp += N;
+		RGB *temp = bufferData;
+		data = new RGB*[H];
+		for (int i=0;i<H;i++)
+		{
+			data[i] = temp;
+			temp += N;
+		}
 	}
 
 	xValues = new float[N];
@@ -998,10 +998,14 @@ void SpectrogramBase::rotateLinePointers(void)
 void SpectrogramBase::setData(float *frequencyData)
 {
 	{
+		//RGB *writeLocation = data[0]+minIndexFreq;
+		//float *readLocation = frequencyData + minIndexFreq;
 		RGB *writeLocation = data[0]+minIndexFreq;
 		float *readLocation = frequencyData + minIndexFreq;
-		for (unsigned int i=0;i<=N;i++)
+
+		for (unsigned int i=minIndexFreq;i<=maxIndexFreq;i++)
 		{
+
 			float real = *(readLocation++);
 			float imag = *(readLocation++);
 
@@ -1023,8 +1027,6 @@ void SpectrogramBase::setData(float *frequencyData)
 				writeLocation->G = writeLocation->raw;
 				writeLocation->B = writeLocation->raw;
 			}
-
-
 
 			writeLocation++;
 		}
@@ -1061,7 +1063,7 @@ void SpectrogramBase::drawDiagram(void)
 }
 
 #if defined(USE_FFTS)
-Spectrogram::Spectrogram(std::string name,int N,int H,float fs):SpectrogramBase(name,N,H,fs)
+Spectrogram::Spectrogram(std::string name,int N,int H,float fs):SpectrogramBase(name,N,H,fs,false)
 {
 	__ffts.outBuffer = new float[2*N];
 	__ffts.plan = ffts_init_1d(N, 1);

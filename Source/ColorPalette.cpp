@@ -5,7 +5,7 @@
  *      Author: jalin
  */
 
-#include "ColorPalette.h"
+#include "../Include/ColorPalette.h"
 #include <algorithm>
 
 using namespace OpenGLsupport;
@@ -14,9 +14,9 @@ using namespace OpenGLsupport;
 ColorPalette::ColorLimit::ColorLimit(float value,GlColor &color):GlColor(color),value(value){}
 ColorPalette::ColorLimit::ColorLimit(float value,std::string html):GlColor(html),value(value){}
 ColorPalette::ColorLimit::ColorLimit(float value,double r, double g, double b,double a):GlColor(r,g,b,a),value(value){}
-ColorPalette::ColorLimit::ColorLimit(float value,double v[4]):GlColor(v),value(value){}
+ColorPalette::ColorLimit::ColorLimit(float value,double v[4]):GlColor(v,4),value(value){}
 ColorPalette::ColorLimit::ColorLimit(float value,unsigned char r, unsigned char g, unsigned char b, unsigned char a):GlColor(r,g,b,a),value(value){}
-ColorPalette::ColorLimit::ColorLimit(float value,unsigned char v[4]):GlColor(v),value(value){}
+ColorPalette::ColorLimit::ColorLimit(float value,unsigned char v[4]):GlColor(v,4),value(value){}
 bool ColorPalette::ColorLimit::operator< (const ColorLimit& other) const
 {
     return (value < other.value);

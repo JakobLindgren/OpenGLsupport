@@ -2,6 +2,9 @@
 #ifdef WIN32
 #include <Windows.h>
 #endif
+#ifdef __unix__
+#include <unistd.h>
+#endif
 #include "../Include/Wrapper.h"
 #include <GL/freeglut.h>
 #include <iostream>
@@ -28,7 +31,16 @@ void WindowManager::end(Window *window)
 	Windowlock.lock();
 	endingWindows.push_back(window);
 	Windowlock.unlock();
-	while (window->window) Sleep(100);
+	while (window->window)
+	{
+#ifdef WIN32
+		Sleep(100);
+#endif
+#ifdef __unix__
+		usleep(100*1000);
+#endif
+	}
+
 }
 
 
@@ -42,7 +54,7 @@ void WindowManager::init(int argc, char **argv)
 	glutInitWindowSize(400, 400);
 	
 
-	glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
+	//glutSetOption(GLUT_ACTION_ON_WINDOW_CLOSE, GLUT_ACTION_CONTINUE_EXECUTION);
 }
 void WindowManager::mainLoop(bool inThread)
 {
@@ -94,7 +106,12 @@ void WindowManager::mainLoop(bool inThread)
 			}
 			else
 			{
+				#ifdef WIN32
 				Sleep(100);
+				#endif
+				#ifdef __unix__
+				usleep(100*1000);
+				#endif
 			}
 		}
 	}
