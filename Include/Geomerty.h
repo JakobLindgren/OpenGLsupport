@@ -33,9 +33,14 @@ namespace OpenGLsupport
 		std::vector<Point> *readPoints, *writePoints;
 	public:
 		GeometryPointVector(void);
+
+		void add(std::vector<double> &x, std::vector<double> &y);
+
 		void add(double x, double y);
 		void add(GeometryBase::Point p);
 		void add(double *x, double *y, int length);
+
+
 		void add(GeometryBase::Point *p, int length);
 		void add(std::vector<GeometryBase::Point> &p);
 
@@ -49,15 +54,19 @@ namespace OpenGLsupport
 	public:
 		GeometryPointCloud(void);
 		void draw(void) override;
+		void setPointColor(GlColor c){pointColor = c;}
 	};
 
 	class GeometryLine :public GeometryPointVector
 	{
 	private:
 		GlColor lineColor;
+		DrawMode mode;
 	public:
 		GeometryLine(void);
 		void draw(void) override;
+		void setMode(DrawMode value);
+		void setLineColor(GlColor c) { lineColor = c; }
 	};
 
 	class GeometryShape :public GeometryPointVector
@@ -68,15 +77,20 @@ namespace OpenGLsupport
 	public:
 		GeometryShape(void);
 		void draw(void) override;
+		void setFillColor(GlColor c) { fillColor = c; }
+		void setLineColor(GlColor c) { lineColor = c; }
 	};
 
 	class GeometryContainer :public Drawable
 	{
 	private:
 		std::vector<GeometryBase*> shapes;
+		double limits[4];
 	public:
 		GeometryContainer(void);
+		void setLimits(double *limits);
 		void add(GeometryBase *s);
+		void clear(bool deleteContent = false);
 		void draw(void) override;
 	};
 }

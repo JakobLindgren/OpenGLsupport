@@ -1,5 +1,5 @@
-#include "Diagram.h"
-#include "Wrapper.h"
+#include "../Include/Diagram.h"
+#include "../Include/Wrapper.h"
 #include <GL/freeglut.h>
 #include <sstream>
 #include <iostream>
@@ -17,7 +17,7 @@ static inline double interp1(double x1, double x2, double y1, double y2, double 
 }
 
 
-DiagramArea::Axis::Axis(Font *font) :font(font),min(0),max(1)
+DiagramArea::Axis::Axis(Font *font) :font(font),minValue(0),maxValue(1)
 {
 	font->setHeight(float(FontHeight));
 	firstSample = true;
@@ -40,21 +40,21 @@ bool DiagramArea::Axis::setup(float min, float max)
 
 	if (firstSample)
 	{
-		this->min = min;
-		this->max = max;
+		this->minValue = min;
+		this->maxValue = max;
 		updated = true;
 	}
 	else
 	{
 
-		if (this->min > min)
+		if (this->minValue > min)
 		{
-			this->min = min;
+			this->minValue = min;
 			updated = true;
 		}
-		if (this->max < max)
+		if (this->maxValue < max)
 		{
-			this->max = max;
+			this->maxValue = max;
 			updated = true;
 		}
 	}
@@ -116,16 +116,16 @@ int DiagramArea::VerticalAxis::bottomOffset(void)
 
 void DiagramArea::VerticalAxis::draw(int height)
 {
-	float scale = height / (max - min);
+	float scale = height / (maxValue - minValue);
 
 	{
-		GlBegin gb(GlBegin::lines);
+		GlBegin gb(DrawMode::lines);
 
 		glVertex2i(0, 0);
 		glVertex2i(0, height);
 		for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 		{
-			float h = (it->value - min) * scale;
+			float h = (it->value - minValue) * scale;
 			glVertex2f(0, h);
 			glVertex2f(-LineLength, h);
 		}
@@ -133,7 +133,7 @@ void DiagramArea::VerticalAxis::draw(int height)
 
 	for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 	{
-		float h = (it->value - min) * scale;
+		float h = (it->value - minValue) * scale;
 
 		GlPushMatrix pm;
 		glTranslatef(-it->length - LineLength, h, 0);
@@ -194,15 +194,15 @@ int DiagramArea::HorizontalAxis::rightOffset(void)
 }
 void DiagramArea::HorizontalAxis::draw(int width)
 {
-	float scale = width / (max - min);
+	float scale = width / (maxValue - minValue);
 
 	{
-		GlBegin gb(GlBegin::lines);
+		GlBegin gb(DrawMode::lines);
 		glVertex2i(0, 0);
 		glVertex2i(width, 0);
 		for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 		{
-			float w = (it->value - min) * scale;
+			float w = (it->value - minValue) * scale;
 
 			glVertex2f(w, 0);
 			glVertex2f(w, -LineLength);
@@ -210,7 +210,7 @@ void DiagramArea::HorizontalAxis::draw(int width)
 	}
 	for (std::vector<Label>::iterator it = labels.begin(); it != labels.end(); ++it)
 	{
-		float w = (it->value - min) * scale;
+		float w = (it->value - minValue) * scale;
 		GlPushMatrix pm;
 		glTranslated(w - it->length *0.5, -LineLength - FontHeight, 0);
 		{
@@ -270,7 +270,7 @@ void DiagramArea::setTitle(std::string value)
 }
 void DiagramArea::drawDiagram(void)
 {
-	GlBegin gb(GlBegin::lines);
+	GlBegin gb(DrawMode::lines);
 	glColor3ub(128, 128, 128);
 	for (int a = 0; a < 4; a++)
 	{
@@ -289,7 +289,7 @@ void DiagramArea::drawDiagram(void)
 
 void drawCross(double d)
 {
-	GlBegin gb(GlBegin::lines);
+	GlBegin gb(DrawMode::lines);
 
 	glColor3f(0, 0, 0);
 	glVertex2d(-d, 0);
@@ -412,7 +412,7 @@ void Histogram::HistogramChannel::draw(float width, int index)
 		unsigned int count = buckets[i];
 
 		{
-			GlBegin gb(GlBegin::quads);
+			GlBegin gb(DrawMode::quads);
 			setColor(index);
 			glVertex2f(x0, 0);
 			glVertex2f(x1, 0);
@@ -420,7 +420,7 @@ void Histogram::HistogramChannel::draw(float width, int index)
 			glVertex2f(x0, float(count));
 		}
 		{
-			GlBegin gb(GlBegin::line_loop);
+			GlBegin gb(DrawMode::line_loop);
 
 			glColor3ub(0, 0, 0);
 			glVertex2f(x0, 0);
@@ -697,7 +697,7 @@ void TimeSeries::drawDiagram(void)
 	for (std::map<int, DataSeries*>::iterator itr = data.begin(); itr != data.end(); itr++)
 	{
 		DataStorage &dataVector = itr->second->data;
-		GlBegin gb(GlBegin::line_strip);
+		GlBegin gb(DrawMode::line_strip);
 
 		setColor(itr->first);
 		for (DataStorage::iterator dataPoint = dataVector.begin(); dataPoint != dataVector.end(); ++dataPoint)
@@ -707,10 +707,93 @@ void TimeSeries::drawDiagram(void)
 	}
 }
 
-LineDiagram::LineDiagram(void):DiagramArea("Line Diagram")
+LineDiagram::LineDiagram(std::string name):DiagramArea(name)
 {
 	firstSample = true;
 }
+void LineDiagram::add(double *x, double *y, int count, int channel)
+{
+	std::vector<ChannelSample> &channelVector = channels[channel];
+	channelVector.reserve(channelVector.size() + count);
+
+	while (count--)
+	{
+		ChannelSample value = { *(x++),*(y++) };
+
+		if (firstSample)
+		{
+			minX = value.x;
+			maxX = value.x;
+			minY = value.y;
+			maxY = value.y;
+			firstSample = false;
+		}
+		else
+		{
+			if (minX > value.x)
+			{
+				minX = value.x;
+			}
+			if (maxX < value.x)
+			{
+				maxX = value.x;
+			}
+			if (minY > value.y)
+			{
+				minY = value.y;
+			}
+			if (maxY < value.y)
+			{
+				maxY = value.y;
+			}
+		}
+		channelVector.push_back(value);
+	}
+	hAxis.setup(minX, maxX);
+	vAxis.setup(minY, maxY);
+}
+void LineDiagram::add(float *x, float *y, int count, int channel)
+{
+	std::vector<ChannelSample> &channelVector = channels[channel];
+	channelVector.reserve(channelVector.size() + count);
+
+	while (count--)
+	{
+		ChannelSample value = { *(x++),*(y++) };
+
+		if (firstSample)
+		{
+			minX = value.x;
+			maxX = value.x;
+			minY = value.y;
+			maxY = value.y;
+			firstSample = false;
+		}
+		else
+		{
+			if (minX > value.x)
+			{
+				minX = value.x;
+			}
+			if (maxX < value.x)
+			{
+				maxX = value.x;
+			}
+			if (minY > value.y)
+			{
+				minY = value.y;
+			}
+			if (maxY < value.y)
+			{
+				maxY = value.y;
+			}
+		}
+		channelVector.push_back(value);
+	}
+	hAxis.setup(minX, maxX);
+	vAxis.setup(minY, maxY);
+}
+
 void LineDiagram::add(ChannelSample *sample, int count,int channel)
 {
 	std::vector<ChannelSample> &channelVector = channels[channel];
@@ -752,6 +835,12 @@ void LineDiagram::add(ChannelSample *sample, int count,int channel)
 	vAxis.setup(minY, maxY);
 }
 
+void OpenGLsupport::LineDiagram::clear(int channel)
+{
+	std::vector<ChannelSample> &channelVector = channels[channel];
+	channelVector.clear();
+}
+
 void LineDiagram::drawDiagram(void)
 {
 	int channel = 0;
@@ -765,7 +854,7 @@ void LineDiagram::drawDiagram(void)
 		int length = it->second.size();
 
 		{
-			GlBegin gb(GlBegin::line_strip);
+			GlBegin gb(DrawMode::line_strip);
 
 			setColor(channel++);
 			while (length--)
@@ -777,7 +866,7 @@ void LineDiagram::drawDiagram(void)
 }
 
 
-SpectrogramBase::SpectrogramBase(std::string name,int N,int H,float fs) :DiagramArea(name),H(H),fs(fs),N(N)
+SpectrogramBase::SpectrogramBase(std::string name,int N,int H,float fs, bool useComplexBuffer) :DiagramArea(name),N(N),H(H),fs(fs), useComplexBuffer(useComplexBuffer)
 {
 	advancement = N / 2;
 	colorPalette = 0;
@@ -862,17 +951,31 @@ void SpectrogramBase::setFrequencyRange(float minF,float maxF)
 }
 
 
-void SpectrogramBase::add(float data)
+void SpectrogramBase::addAsComplex(float data)
 {
 	inputQueue.push_back(data);
 	inputQueue.push_back(0);
 }
 void SpectrogramBase::add(float *dataVector, int count, int step)
 {
-	while (count--)
+	inputQueue.reserve(inputQueue.size() + count);
+
+	if (useComplexBuffer)
 	{
-		add(*dataVector);
-		dataVector += step;
+		while (count--)
+		{
+			addAsComplex(*dataVector);
+			dataVector += step;
+		}
+	}
+	else
+	{
+		
+		while (count--)
+		{
+			inputQueue.push_back(*dataVector);
+			dataVector += step;
+		}
 	}
 }
 void SpectrogramBase::setColorPalette(ColorPalette *colorPalette)
@@ -979,6 +1082,32 @@ bool Spectrogram::execute(void)
 		ffts_execute(__ffts.plan,inputQueue.data(), __ffts.outBuffer);
 		inputQueue.erase(inputQueue.begin(),inputQueue.begin()+2*advancement);
 		setData(__ffts.outBuffer);
+		res = true;
+	}
+	return res;
+}
+#endif
+
+#if defined(USE_JAKOB_FFT)
+Spectrogram::Spectrogram(std::string name, int N, int H, float fs) :SpectrogramBase(name, N, H, fs,false),fft(N)
+{
+	outData = new float[N];
+}
+Spectrogram::~Spectrogram(void)
+{
+	delete[] outData;
+}
+bool Spectrogram::execute(void)
+{
+	std::cout << "Spectrogram::execute_fft" << std::endl;
+
+	bool res = false;
+	while (inputQueue.size() >= N)
+	{
+		fft.load(inputQueue.data(), N);
+		fft.processFFT();
+		fft.unload(outData);
+		setData(outData);
 		res = true;
 	}
 	return res;
